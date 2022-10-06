@@ -16,34 +16,57 @@ app.use(express.static('public'));
 
 
 app.get('/api/notes', (req,res) => {
-    res.json(db);
+     fs.readFile("./db/db.json", (err, db) => {
+        if (err) throw err;
+        db = JSON.parse(db)
+        res.json(db);
+    });
 });
 
+
 app.post('/api/notes', (req, res) => {
-    
-    let newNote = req.body;
-    newNote.id = uuidv4();
-    db.push(newNote);
-    fs.writeFileSync("./Develop/db/db.json", JSON.stringify(db), (err) => {
-        if(err) throw err;
+    // Read file first
+    // Then you can db.push
+    // Then write the larger array back to db
+    // And then you optionally can res.json({"status":"success"})
+    const currentNote = req.body;
+
+    fs.readFile(path.join(__dirname, './db/db.json'), (error, notes) => {
+        if(error) {
+            return console.log(error)
+        }
+        notes = JSON.parse(notes)
+
+        if (notes.length > 0) {
+        let lastId = notes[notes.length - 1].id
+        let id = parseInt(lastId) + 1
+        } else {
+            let id = 10;
+        }
+
+        let newNote = {
+            title: currentNote.title,
+            text: currentNote.text
+        }
+
+        const saveNewNote = notes.concat(newNote)
+        fs.writeFile(path.join(__dirname, './db/db.json'), JSON.stringify(saveNewNote), (error, data) => {
+            if (error) {
+                return error
+            } 
+            console.log(saveNewNote)
+            res.json(saveNewNote);
+        })
     });
-    res.send(db)
-})
+  
+  });
 
 
-app.delete('/api/notes/:id', (req, res) => {
-    db.forEach((note, i) => {
-        if (note.id === req.params.id) {db.splice(i, 1)}
-})
 
-fs.writeFile('./db/db.json', JSON.stringify(db), (err) => {
-    if(err) throw err;
-})
-res.send(db)
-})
 
 app.get('/notes', (req, res) => res.sendFile(path.join(__dirname, '/public/notes.html')));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, '/public/index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '/public/index.html')));
+
 
 
 app.listen(PORT, function() {
